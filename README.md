@@ -4,13 +4,13 @@ A retro Windows 95-style MIDI-reactive visual system that creates dynamic popup 
 
 ## Features
 
-### 🎹 MIDI Reactivity
+### MIDI Reactivity
 - **Real-time MIDI Input**: Responds to MIDI notes, control changes, and program changes
 - **Multi-device Support**: Automatically detects and connects to all available MIDI input devices
 - **Auto-reconnection**: Handles device disconnections and reconnections gracefully
 - **MIDI Clock Filtering**: Ignores timing signals to focus on musical content
 
-### 🖼️ Dynamic Popup System
+### Dynamic Popup System
 - **8 Unique Popup Types**: Each MIDI note (60-67) creates different popup styles:
   - **Note 60**: Critical system error dialogs
   - **Note 61**: Progress bars and installation windows
@@ -23,26 +23,26 @@ A retro Windows 95-style MIDI-reactive visual system that creates dynamic popup 
 - **Image Integration**: Random images from `pics/` folder (10,000+ available)
 - **Colorful Variety**: 8 different color schemes rotate based on MIDI note values
 
-### 🎛️ Three Positioning Modes
+### Three Positioning Modes
 Control popup behavior via MIDI Program Change messages:
 - **Program 0 (Centered)**: All popups stack in the center of the screen
 - **Program 1 (Slight Random)**: Popups appear near center with subtle blur effects and 15% image chance
 - **Program 2 (Fully Random)**: Complete chaos mode with 35% image chance and corrupted terminal output
 
-### 💻 Retro Terminal Monitor
+### Retro Terminal Monitor
 - **Real-time MIDI Monitoring**: Displays MIDI activity in a bash-style terminal
 - **Chaos Mode**: In fully random mode, terminal output becomes corrupted with Unicode symbols
 - **Command Variety**: Normal vs. unhinged command sets for different modes
 - **Scrolling History**: Maintains terminal line history with automatic cleanup
 
-### 🎨 Visual Effects
+### Visual Effects
 - **Velocity Sensitivity**: Popup intensity scales with MIDI note velocity
 - **Blur Effects**: Dreamlike blur in slight random mode
 - **Color Cycling**: Different color schemes for different notes
 - **Chaos Styling**: Special visual corruption in fully random mode
 - **Smooth Animations**: Fade in/out transitions and shake effects
 
-### 🔧 Advanced Features
+### Advanced Features
 - **Auto-cleanup**: Popups clear after 2 seconds of MIDI inactivity
 - **Memory Management**: Periodic cleanup prevents memory leaks
 - **Screen Coverage Control**: Automatically removes oldest popups when screen gets crowded
@@ -103,11 +103,11 @@ Webcore/
 
 | Browser | Web MIDI Support | Status |
 |---------|------------------|--------|
-| Chrome  | ✅ Full         | Recommended |
-| Edge    | ✅ Full         | Supported |
-| Opera   | ✅ Full         | Supported |
-| Firefox | ❌ No          | Not supported |
-| Safari  | ❌ No          | Not supported |
+| Chrome  | Full Support    | Recommended |
+| Edge    | Full Support    | Supported |
+| Opera   | Full Support    | Supported |
+| Firefox | No Support      | Not supported |
+| Safari  | No Support      | Not supported |
 
 ## MIDI Note Mapping
 
