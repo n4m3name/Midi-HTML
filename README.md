@@ -20,7 +20,7 @@ A retro Windows 95-style MIDI-reactive visual system that creates dynamic popup 
   - **Note 65**: About/calculator dialogs
   - **Note 66**: Task manager/system monitor
   - **Note 67**: Network connection dialogs
-- **Image Integration**: Random images from `pics/` folder (10,000+ available)
+- **Image Integration**: Random images from `pics/` folder
 - **Colorful Variety**: 8 different color schemes rotate based on MIDI note values
 
 ### Three Positioning Modes
