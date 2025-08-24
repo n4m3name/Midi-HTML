@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MIDI Warning System</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            background: #000000;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: "MS Sans Serif", sans-serif;
+        }
+        
+        /* Classic Windows 95/98 popup dialog */
+        .warning-popup {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: #c0c0c0;
+            border: 2px outset #c0c0c0;
+            min-width: 300px;
+            min-height: 150px;
+            font-family: "MS Sans Serif", "Tahoma", sans-serif;
+            font-size: 11px;
+            box-shadow: 2px 2px 1px rgba(0,0,0,0.8);
+        }
+        
+        .title-bar {
+            background: linear-gradient(90deg, #000080 0%, #0000c0 100%);
+            color: white;
+            padding: 3px;
+            font-weight: normal;
+            font-size: 11px;
+            border-bottom: 1px solid #808080;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 18px;
+        }
+        
+        .title-text {
+            padding-left: 4px;
+        }
+        
+        .close-button {
+            width: 16px;
+            height: 14px;
+            background: #c0c0c0;
+            border: 1px outset #c0c0c0;
+            font-size: 8px;
+            text-align: center;
+            line-height: 12px;
+            cursor: pointer;
+            margin-right: 2px;
+            font-weight: bold;
+        }
+        
+        .close-button:active {
+            border: 1px inset #c0c0c0;
+        }
+        
+        .popup-content {
+            padding: 12px;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .warning-icon {
+            width: 32px;
+            height: 32px;
+            background: #ffff00;
+            border: 2px inset #c0c0c0;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #000000;
+            flex-shrink: 0;
+        }
+        
+        .warning-text {
+            flex: 1;
+            font-size: 11px;
+            line-height: 1.3;
+            color: #000000;
+        }
+        
+        .button-area {
+            padding: 8px 12px 12px 12px;
+            text-align: right;
+            border-top: 1px solid #808080;
+        }
+        
+        .ok-button {
+            background: #c0c0c0;
+            border: 2px outset #c0c0c0;
+            padding: 4px 16px;
+            font-family: "MS Sans Serif", "Tahoma", sans-serif;
+            font-size: 11px;
+            cursor: pointer;
+            min-width: 75px;
+        }
+        
+        .ok-button:active {
+            border: 2px inset #c0c0c0;
+        }
+        
+        .checkbox-area {
+            padding: 8px 12px;
+            border-top: 1px solid #808080;
+            background: #c0c0c0;
+            border-bottom: 1px solid #808080;
+        }
+        
+        .checkbox {
+            margin-right: 4px;
+        }
+        
+        .checkbox-label {
+            font-size: 11px;
+        }
+        
+        /* Retro Terminal Styles */
+        .terminal-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 400px;
+            height: 300px;
+            background: #000000;
+            border: 3px outset #c0c0c0;
+            font-family: "Courier New", "Perfect DOS VGA 437", monospace;
+            z-index: 1000;
+            display: block;
+        }
+        
+        .terminal-title-bar {
+            background: linear-gradient(90deg, #000080 0%, #0000c0 100%);
+            color: white;
+            padding: 3px;
+            font-weight: normal;
+            font-size: 11px;
+            border-bottom: 1px solid #808080;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 18px;
+            font-family: "MS Sans Serif", "Tahoma", sans-serif;
+        }
+        
+        .terminal-title-text {
+            padding-left: 4px;
+        }
+        
+        .terminal-close-button {
+            width: 16px;
+            height: 14px;
+            background: #c0c0c0;
+            border: 1px outset #c0c0c0;
+            font-size: 8px;
+            text-align: center;
+            line-height: 12px;
+            cursor: pointer;
+            margin-right: 2px;
+            font-weight: bold;
+            font-family: "MS Sans Serif", "Tahoma", sans-serif;
+        }
+        
+        .terminal-close-button:active {
+            border: 1px inset #c0c0c0;
+        }
+        
+        .terminal-screen {
+            background: #000000;
+            color: #00ff00;
+            padding: 8px;
+            height: calc(100% - 30px);
+            overflow: hidden;
+            font-family: "Courier New", "Perfect DOS VGA 437", monospace;
+            font-size: 12px;
+            line-height: 1.2;
+            white-space: pre-wrap;
+            word-break: break-all;
+            position: relative;
+        }
+        
+        .terminal-cursor {
+            display: inline-block;
+            background: #00ff00;
+            color: #000000;
+            animation: blink-cursor 1s infinite;
+            width: 8px;
+            height: 14px;
+            position: absolute;
+        }
+        
+        @keyframes blink-cursor {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .terminal-line {
+            min-height: 14px;
+        }
+        
+        /* Image popup styles */
+        .popup-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border: none;
+            background: #ffffff;
+            display: block;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .image-info {
+            font-size: 8px;
+            color: #666666;
+            margin-top: 4px;
+            text-align: center;
+        }
+        
+        .chaos-image {
+            filter: hue-rotate(90deg) saturate(2) contrast(1.5) brightness(1.2);
+            background: #001100;
+        }
+    </style>
+</head>
+<body>
+    <div class="warning-popup" id="popup">
+        <div class="title-bar" id="titleBar">
+            <span class="title-text" id="titleText">System Warning</span>
+            <div class="close-button" id="closeBtn">×</div>
+        </div>
+        
+        <div class="popup-content">
+            <div class="warning-icon" id="warningIcon">!</div>
+            <div class="warning-text" id="warningText">
+                A problem has been detected and Windows has been shut down to prevent damage to your computer.
+            </div>
+        </div>
+        
+        <div class="checkbox-area">
+            <input type="checkbox" class="checkbox" id="checkbox">
+            <label class="checkbox-label" id="checkboxLabel">Don't show this message again</label>
+        </div>
+        
+        <div class="button-area">
+            <button class="ok-button" id="okButton">OK</button>
+        </div>
+    </div>
+    
+    <!-- Retro Terminal -->
+    <div class="terminal-container" id="terminal">
+        <div class="terminal-title-bar">
+            <span class="terminal-title-text">MIDI Monitor - /usr/local/bin/midimon</span>
+            <div class="terminal-close-button" id="terminalCloseBtn">×</div>
+        </div>
+        <div class="terminal-screen" id="terminalScreen">
+            <div class="terminal-line">midimon v1.2.3 - Real-time MIDI Monitor</div>
+            <div class="terminal-line">Copyright (c) 1995-2025 Free Software Foundation</div>
+            <div class="terminal-line"></div>
+            <div class="terminal-line">evan@comp:~/$<span class="terminal-cursor" id="terminalCursor">_</span></div>
+        </div>
+    </div>
+    
+    <script>
+        class MIDIPopupController {
+            constructor() {
+                this.midiAccess = null;
+                this.popup = document.getElementById('popup');
+                this.titleBar = document.getElementById('titleBar');
+                this.titleText = document.getElementById('titleText');
+                this.warningIcon = document.getElementById('warningIcon');
+                this.warningText = document.getElementById('warningText');
+                this.okButton = document.getElementById('okButton');
+                this.checkbox = document.getElementById('checkbox');
+                this.checkboxLabel = document.getElementById('checkboxLabel');
+                this.closeBtn = document.getElementById('closeBtn');
+                
+                // Terminal elements
+                this.terminal = document.getElementById('terminal');
+                this.terminalScreen = document.getElementById('terminalScreen');
+                this.terminalCursor = document.getElementById('terminalCursor');
+                this.terminalCloseBtn = document.getElementById('terminalCloseBtn');
+                
+                // Terminal state
+                this.terminalLines = [];
+                this.terminalMaxLines = 15;
+                this.terminalCurrentLine = '';
+                this.terminalCharacters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?/~`';
+                this.terminalMidiCommands = [
+                    'MIDI_IN: Note detected',
+                    'PROC: Analyzing signal',
+                    'BUFF: Loading audio data',
+                    'SYNC: Timing adjustment',
+                    'CHAN: Processing channel',
+                    'VELO: Velocity calculated',
+                    'FREQ: Frequency locked',
+                    'WAVE: Waveform generated',
+                    'FILT: Filter applied',
+                    'ECHO: Reverb processing',
+                    'COMP: Compression active',
+                    'MIDI: Program change',
+                    'CTRL: Control received',
+                    'SYSEX: System exclusive',
+                    'CLOCK: Timing sync'
+                ];
+                
+                // Unhinged terminal commands for fully random mode
+                this.terminalUnhingedCommands = [
+                    '̡̢̧̨̢̛̺̱̣̘̝̪̲̫̤̭̱̭̘̮̮͍̹̬̮̻̩̼̲̘̦̳̱̩̥̜̱̣̺̱̬̫̤̭̫̤̻̩̼̲̘̦̱̩̥̜',
+                    'ṂIDI̸̟̱̝̫_ÌN: ₦Ø₮Ɇ đɇ₮ɇ₵₮ɇđ ◈◢◣◤◥',
+                    'P̷̢̧̢̛̟̱̝̫R̸̢̧̢̛̟̱̝̫Ơ̷̢̧̢̟̱̝̫C̸̢̧̢̛̟̱̝̫: ₳₦₳ⱠɎⱫł₦₲ ₴ł₲₦₳Ⱡ',
+                    'B̸̢̧̢̛̟̱̝̫Ư̷̢̧̢̟̱̝̫F̸̢̧̢̛̟̱̝̫F̷̢̧̢̛̟̱̝̫: ⱠØ₳đł₦₲ ₳ɄđłØ đ₳₮₳ ⚡⚡⚡',
+                    'S̷̢̧̢̛̟̱̝̫Y̸̢̧̢̛̟̱̝̫N̷̢̧̢̛̟̱̝̫C̸̢̧̢̛̟̱̝̫: ₮ł₥ł₦₲ ₳đJɄ₴₮₥Ɇ₦₮ ◢◣▓▒░',
+                    'C̸̢̧̢̛̟̱̝̫H̷̢̧̢̛̟̱̝̫A̸̢̧̢̛̟̱̝̫N̷̢̧̢̛̟̱̝̫: ₽ⱤØ₵Ɇ₴₴ł₦₲ ₵Ⱨ₳₦₦ɇⱠ ░▒▓█',
+                    'V̷̢̧̢̛̟̱̝̫E̸̢̧̢̛̟̱̝̫L̷̢̧̢̛̟̱̝̫Ơ̸̢̧̢̟̱̝̫: VɆⱠØ₵ł₮Ɏ ₵₳Ⱡ₵ɄⱠ₳₮Ɇđ ⟐⟑⟒⟓',
+                    'F̸̢̧̢̛̟̱̝̫R̷̢̧̢̛̟̱̝̫E̸̢̧̢̛̟̱̝̫Q̷̢̧̢̛̟̱̝̫: ₣ⱤɆ₲ɄɆ₦₵Ɏ ⱠØ₵₭Ɇđ ⧨⧩⧪⧫',
+                    'W̷̢̧̢̛̟̱̝̫A̸̢̧̢̛̟̱̝̫V̷̢̧̢̛̟̱̝̫E̸̢̧̢̛̟̱̝̫: ₩₳VɆ₣ØⱤ₥ ₲Ɇ₦ɇⱤ₳₮Ɇđ ◌◍◎●◐◑◒◓',
+                    'F̸̢̧̢̛̟̱̝̫I̷̢̧̢̛̟̱̝̫L̸̢̧̢̛̟̱̝̫T̷̢̧̢̛̟̱̝̫: ₣łⱠ₮ɆⱤ ₳₱₱ⱠłɆđ ⚡◉◎○●◑',
+                    'E̷̢̧̢̛̟̱̝̫C̸̢̧̢̛̟̱̝̫H̷̢̧̢̛̟̱̝̫Ơ̸̢̧̢̟̱̝̫: ⱤɆVɆⱤɆⱤɆVɆⱤɆVɆⱤɆVɆⱤɆVɆⱤ ▲▼◄►',
+                    'C̸̢̧̢̛̟̱̝̫Ơ̷̢̧̢̟̱̝̫M̸̢̧̢̛̟̱̝̫P̷̢̧̢̛̟̱̝̫: ₵Ø₥₽ⱤɆ₴₴łØ₦ ₳₵₮łVɆ ███▓▒░',
+                    'M̷̢̧̢̛̟̱̝̫I̸̢̧̢̛̟̱̝̫D̷̢̧̢̛̟̱̝̫I̸̢̧̢̛̟̱̝̫: ₽ⱤØ₲Ɽ₳₥ ₵Ⱨ₳₦₲Ɇ ⬢⬡⬠⬟',
+                    'C̸̢̧̢̛̟̱̝̫T̷̢̧̢̛̟̱̝̫R̸̢̧̢̛̟̱̝̫L̷̢̧̢̛̟̱̝̫: ₵Ø₦₮ⱤØⱠ ⱤɆ₵ɆłVɆđ ⟐⟑⟒⟓',
+                    'S̷̢̧̢̛̟̱̝̫Y̸̢̧̢̛̟̱̝̫S̷̢̧̢̛̟̱̝̫E̸̢̧̢̛̟̱̝̫X̷̢̧̢̛̟̱̝̫: ₴Ɏ₴₮Ɇ₥ ɆӾ₵ⱠɄ₴łVɆ ⧨⧩⧪⧫',
+                    'C̸̢̧̢̛̟̱̝̫L̷̢̧̢̛̟̱̝̫Ơ̸̢̧̢̟̱̝̫C̷̢̧̢̛̟̱̝̫K̸̢̧̢̛̟̱̝̫: ₮ł₥ł₦₲ ₴Ɏ₦₵ ◢◣◤◥▓▒░',
+                    'R̷̢̧̢̛̟̱̝̫E̸̢̧̢̛̟̱̝̫A̷̢̧̢̛̟̱̝̫L̸̢̧̢̛̟̱̝̫I̷̢̧̢̛̟̱̝̫T̸̢̧̢̛̟̱̝̫Y̷̢̧̢̛̟̱̝̫: ₲Ⱡł₮₵Ⱨł₦₲... ░▒▓█▓▒░',
+                    'V̸̢̧̢̛̟̱̝̫Ơ̷̢̧̢̟̱̝̫I̸̢̧̢̛̟̱̝̫D̷̢̧̢̛̟̱̝̫: ₵Ø₦₴Ʉ₥ł₦₲ ₳ɄđłØ ⚡⚡⚡',
+                    'D̷̢̧̢̛̟̱̝̫I̸̢̧̢̛̟̱̝̫M̷̢̧̢̛̟̱̝̫E̸̢̧̢̛̟̱̝̫N̷̢̧̢̛̟̱̝̫S̸̢̧̢̛̟̱̝̫I̷̢̧̢̛̟̱̝̫Ơ̸̢̧̢̟̱̝̫N̷̢̧̢̛̟̱̝̫: ₮Ɇ₳Ɽł₦₲ ◢◣◤◥',
+                    'T̸̢̧̢̛̟̱̝̫I̷̢̧̢̛̟̱̝̫M̸̢̧̢̛̟̱̝̫E̷̢̧̢̛̟̱̝̫: ฿ɆĐł₦₲ ł₦₩₳Ɽđ ◌◍◎●',
+                    'M̷̢̧̢̛̟̱̝̫A̸̢̧̢̛̟̱̝̫T̷̢̧̢̛̟̱̝̫R̸̢̧̢̛̟̱̝̫I̷̢̧̢̛̟̱̝̫X̸̢̧̢̛̟̱̝̫: ₵ØⱤⱤɄ₱₮łØ₦ ⧨⧩⧪⧫'
+                ];
+                
+                // Chaos characters for fully random mode
+                this.chaosCharacters = '▓▒░█▄▀■□▪▫◢◣◤◥◆◇○●◐◑◒◓⬟⬠⬡⬢⬣⧨⧩⧪⧫◌◍◎⟐⟑⟒⟓▲▼◄►⚡☠⚠✘✗⊗⊙⊕⊖⊘⊚⊛⊜⊝⊞⊟⊠⊡';
+                
+                // Glitch prefixes/suffixes for unhinged mode
+                this.glitchPrefixes = [
+                    '̡̢̧̨̢̛',
+                    'Ṽ̷̢̧̢̛̟̱̝̫',
+                    'E̸̢̧̢̛̟̱̝̫R̷̢̧̢̛̟̱̝̫R̸̢̧̢̛̟̱̝̫Ơ̷̢̧̢̟̱̝̫R̸̢̧̢̛̟̱̝̫',
+                    'F̷̢̧̢̛̟̱̝̫A̸̢̧̢̛̟̱̝̫T̷̢̧̢̛̟̱̝̫A̸̢̧̢̛̟̱̝̫L̷̢̧̢̛̟̱̝̫',
+                    '⚡⚡⚡',
+                    '▓▒░GLITCH░▒▓',
+                    '◢◣BREACH◤◥',
+                    '⟐VOID⟓'
+                ];
+                
+                // Timeout tracking
+                this.currentTimeout = null;
+                this.popupCounter = 0; // Track number of popups created
+                
+                // Program change state tracking
+                this.currentProgram = 0; // 0=centered, 1=slight_random, 2=fully_random
+                this.programStates = {
+                    0: 'centered',       // All boxes centered, stacked
+                    1: 'slight_random',  // Slight randomness from center
+                    2: 'fully_random'    // Fully random positioning
+                };
+                
+                // Auto-clear functionality when song stops
+                this.lastMidiTime = Date.now();
+                this.midiTimeout = null;
+                this.autoCleanupDelay = 2000; // Clear popups after 2 seconds of no MIDI
+                
+                // Periodic cleanup to prevent memory buildup
+                this.periodicCleanupInterval = null;
+                
+                // MIDI heartbeat monitoring
+                this.midiHeartbeatInterval = null;
+                this.lastMidiHeartbeat = Date.now();
+                
+                // Image system for random modes
+                this.imageFolder = 'pics/';
+                this.availableImages = [];
+                this.imageCache = new Map();
+                this.loadImageList();
+                
+                // Initially hide the original popup (we'll clone it for each note)
+                this.popup.style.display = 'none';
+                
+                // MIDI parameter mappings (each CC controls a different aspect)
+                this.midiMappings = {
+                    // Position and size
+                    1: (value) => this.setPosition(value), // Mod wheel - X position
+                    2: (value) => this.setVerticalPosition(value), // Breath - Y position  
+                    7: (value) => this.setSize(value), // Volume - overall size
+                    10: (value) => this.setPan(value), // Pan - rotation
+                    
+                    // Colors
+                    11: (value) => this.setBackgroundColor(value), // Expression - background
+                    12: (value) => this.setTitleBarColor(value), // Effect 1 - title bar
+                    13: (value) => this.setTextColor(value), // Effect 2 - text color
+                    16: (value) => this.setIconColor(value), // GP 1 - icon color
+                    
+                    // Text and content
+                    17: (value) => this.setFontSize(value), // GP 2 - font size
+                    18: (value) => this.setBorderStyle(value), // GP 3 - border style
+                    19: (value) => this.setOpacity(value), // GP 4 - opacity
+                    20: (value) => this.setSkew(value), // GP 5 - skew/distortion
+                    
+                    // Visibility and behavior
+                    64: (value) => this.setSustain(value), // Sustain - show/hide elements
+                    65: (value) => this.setPortamento(value), // Portamento - blinking
+                    66: (value) => this.setSostenuto(value), // Sostenuto - shake effect
+                    67: (value) => this.setSoftPedal(value), // Soft pedal - invert colors
+                };
+                
+                this.warningMessages = [
+                    "A problem has been detected and Windows has been shut down to prevent damage to your computer.",
+                    "MIDI OVERFLOW ERROR: Too many notes detected",
+                    "FATAL EXCEPTION 0x4D494449 has occurred at memory location 0x00000000",
+                    "The system has encountered a critical error and must restart immediately.",
+                    "WARNING: Temporal anomaly detected in audio buffer",
+                    "KERNEL PANIC: MIDI driver has caused a system malfunction",
+                    "Blue Screen of Death: Musical edition - Press any key to continue suffering",
+                    "ERROR 404: Musical talent not found",
+                    "░▒▓ MEMORY V10L4710N D3T3CT3D ▓▒░",
+                    "■ERROR■ System has become too musical ■ERROR■",
+                    "CRASH: Reality.exe has stopped working",
+                    "▓▓▓ UNDEFINED SOUND DETECTED ▓▓▓"
+                ];
+                
+                this.iconSymbols = ['!', '?', '×', '◆', '▲', '●', '♪', '♫', '☠', '⚠', '◢', '◣', '◤', '◥', '◇', '○', '◐', '◑', '◒', '◓', '⬟', '⬠', '⬡', '⬢', '⬣'];
+                
+                this.titleTexts = [
+                    "System Warning", "MIDI Error", "Fatal Exception", "Kernel Panic", 
+                    "Blue Screen", "Critical Error", "System Halt", "Memory Violation",
+                    "SyS7eM 3RR0R", "F4T4L EXC3P710N", "K3RN3L P4N1C", "M3M0RY V10L4710N", 
+                    "CR1T1C4L F41LUR3", "■ERROR■", "▓▓▓▓▓▓▓▓", "░░FAULT░░"
+                ];
+                
+                this.init();
+            }
+            
+            async init() {
+                console.log('Initializing MIDI Popup Controller...');
+                
+                if (navigator.requestMIDIAccess) {
+                    try {
+                        this.midiAccess = await navigator.requestMIDIAccess();
+                        this.setupMIDI();
+                        console.log('MIDI access granted!');
+                    } catch (error) {
+                        console.error('MIDI access denied:', error);
+                    }
+                } else {
+                    console.error('Web MIDI API not supported');
+                }
+                
+                // Setup click handlers for original popup (not used now, but kept for compatibility)
+                this.closeBtn.addEventListener('click', () => {
+                    // Clear all popups
+                    this.clearAllPopups();
+                });
+                this.okButton.addEventListener('click', () => {
+                    // Clear all popups
+                    this.clearAllPopups();
+                });
+                
+                // Terminal close button
+                this.terminalCloseBtn.addEventListener('click', () => {
+                    this.terminal.style.display = 'none';
+                });
+                
+                // Double-click terminal title to minimize/restore
+                this.terminal.querySelector('.terminal-title-bar').addEventListener('dblclick', () => {
+                    const screen = this.terminalScreen;
+                    if (screen.style.display === 'none') {
+                        screen.style.display = 'block';
+                        this.terminal.style.height = '300px';
+                    } else {
+                        screen.style.display = 'none';
+                        this.terminal.style.height = '24px';
+                    }
+                });
+                
+                // Add keyboard shortcut to manually clear popups (Spacebar)
+                document.addEventListener('keydown', (event) => {
+                    if (event.code === 'Space') {
+                        event.preventDefault();
+                        console.log('Manual popup clear triggered (Spacebar)');
+                        this.clearAllPopups();
+                        this.resetToIntroState();
+                    } else if (event.ctrlKey && event.key === 'c') {
+                        // Ctrl+C to clear terminal
+                        event.preventDefault();
+                        this.clearTerminal();
+                    } else if (event.key === 'F12') {
+                        // F12 to toggle terminal visibility
+                        event.preventDefault();
+                        this.terminal.style.display = this.terminal.style.display === 'none' ? 'block' : 'none';
+                    } else if (event.key === 'F11') {
+                        // F11 to force MIDI reconnection
+                        event.preventDefault();
+                        this.reconnectMIDI();
+                    }
+                });
+                
+                // Start periodic cleanup to prevent memory accumulation
+                this.startPeriodicCleanup();
+                
+                // Start MIDI monitoring
+                this.startMidiMonitoring();
+                
+                // Add cleanup on page unload
+                window.addEventListener('beforeunload', () => {
+                    this.cleanup();
+                });
+            }
+            
+            startPeriodicCleanup() {
+                // Clean up memory every 30 seconds
+                this.periodicCleanupInterval = setInterval(() => {
+                    // Force garbage collection of orphaned DOM elements
+                    const allPopups = document.querySelectorAll('[id^="popup-"]');
+                    const orphanedPopups = [];
+                    
+                    allPopups.forEach(popup => {
+                        // Check if popup is still properly attached and visible
+                        if (!popup.parentNode || popup.style.opacity === '0' || 
+                            popup.offsetParent === null && popup.style.display !== 'none') {
+                            orphanedPopups.push(popup);
+                        }
+                    });
+                    
+                    // Remove orphaned popups
+                    orphanedPopups.forEach(popup => {
+                        if (popup.parentNode) {
+                            popup.remove();
+                        }
+                    });
+                    
+                    if (orphanedPopups.length > 0) {
+                        console.log(`Cleaned up ${orphanedPopups.length} orphaned popups`);
+                    }
+                    
+                    // Limit terminal lines more aggressively during long sessions
+                    const terminalLines = this.terminalScreen.querySelectorAll('.terminal-line');
+                    if (terminalLines.length > this.terminalMaxLines + 5) {
+                        // Remove excess lines beyond the limit
+                        const excessLines = terminalLines.length - this.terminalMaxLines;
+                        for (let i = 0; i < excessLines; i++) {
+                            if (terminalLines[i]) {
+                                terminalLines[i].remove();
+                            }
+                        }
+                    }
+                }, 30000); // Run every 30 seconds
+            }
+            
+            startMidiMonitoring() {
+                // Monitor MIDI connection health every 60 seconds
+                this.midiHeartbeatInterval = setInterval(() => {
+                    const timeSinceLastMidi = Date.now() - this.lastMidiTime;
+                    
+                    // If no MIDI activity for 5 minutes, check connections
+                    if (timeSinceLastMidi > 300000) { // 5 minutes
+                        console.log('No MIDI activity for 5 minutes, checking connections...');
+                        
+                        if (this.midiAccess && this.midiAccess.inputs) {
+                            const connectedInputs = Array.from(this.midiAccess.inputs.values())
+                                .filter(input => input.state === 'connected');
+                            
+                            if (connectedInputs.length === 0) {
+                                console.log('No MIDI devices connected, attempting reconnection...');
+                                this.addTerminalLine('WARNING: No MIDI devices detected');
+                                this.reconnectMIDI();
+                            } else {
+                                console.log(`${connectedInputs.length} MIDI device(s) still connected`);
+                            }
+                        }
+                    }
+                }, 60000); // Check every 60 seconds
+            }
+            
+            cleanup() {
+                // Clear all timeouts and intervals
+                if (this.midiTimeout) {
+                    clearTimeout(this.midiTimeout);
+                    this.midiTimeout = null;
+                }
+                
+                if (this.currentTimeout) {
+                    clearTimeout(this.currentTimeout);
+                    this.currentTimeout = null;
+                }
+                
+                if (this.periodicCleanupInterval) {
+                    clearInterval(this.periodicCleanupInterval);
+                    this.periodicCleanupInterval = null;
+                }
+                
+                if (this.midiHeartbeatInterval) {
+                    clearInterval(this.midiHeartbeatInterval);
+                    this.midiHeartbeatInterval = null;
+                }
+                
+                // Remove all popups
+                this.clearAllPopups();
+                
+                // Clear MIDI listeners
+                if (this.midiAccess && this.midiAccess.inputs) {
+                    this.midiAccess.inputs.forEach(input => {
+                        if (input.onmidimessage) {
+                            input.onmidimessage = null;
+                        }
+                    });
+                }
+                
+                console.log('MIDI system cleaned up');
+            }
+            
+            reconnectMIDI() {
+                console.log('Force reconnecting MIDI devices...');
+                try {
+                    // Clear existing connections
+                    if (this.midiAccess && this.midiAccess.inputs) {
+                        this.midiAccess.inputs.forEach(input => {
+                            if (input.onmidimessage) {
+                                input.onmidimessage = null;
+                            }
+                        });
+                    }
+                    
+                    // Re-setup MIDI connections
+                    if (this.midiAccess) {
+                        this.setupMIDI();
+                        this.addTerminalLine('SYSTEM: MIDI devices reconnected');
+                    }
+                } catch (error) {
+                    console.error('Error reconnecting MIDI:', error);
+                    this.addTerminalLine('ERROR: Failed to reconnect MIDI devices');
+                }
+            }
+            
+            loadImageList() {
+                // Generate a list of available images based on the pattern observed in the pics folder
+                // Images appear to be numbered from 3-999 with variations (2)-(10)
+                const baseNumbers = [];
+                for (let i = 3; i <= 999; i++) {
+                    baseNumbers.push(i);
+                }
+                
+                // Create the full list including variations
+                baseNumbers.forEach(num => {
+                    // Add base image
+                    this.availableImages.push(`${num}.jpg`);
+                    
+                    // Add variations (2) through (10)
+                    for (let variation = 2; variation <= 10; variation++) {
+                        this.availableImages.push(`${num} (${variation}).jpg`);
+                    }
+                });
+                
+                console.log(`Loaded ${this.availableImages.length} available images`);
+            }
+            
+            getRandomImage() {
+                if (this.availableImages.length === 0) {
+                    return null;
+                }
+                
+                const randomIndex = Math.floor(Math.random() * this.availableImages.length);
+                const selectedImage = this.availableImages[randomIndex];
+                return `${this.imageFolder}${selectedImage}`;
+            }
+            
+            shouldShowImageInPopup() {
+                if (this.currentProgram === 0) {
+                    return false; // No images in centered mode
+                } else if (this.currentProgram === 1) {
+                    return Math.random() < 0.15; // 15% chance in slight random mode
+                } else if (this.currentProgram === 2) {
+                    return Math.random() < 0.35; // 35% chance in fully random mode (still well under half)
+                }
+                return false;
+            }
+            
+            addImageToPopup(popup, note, velocity, titleText, warningIcon, warningText, buttonArea) {
+                // This method converts a regular popup into a clean image viewer popup
+                const imagePath = this.getRandomImage();
+                if (!imagePath) {
+                    return; // No images available
+                }
+                
+                // Keep title bar but modify it for image viewer
+                const titleBar = popup.querySelector('.title-bar');
+                if (titleBar) {
+                    // Set appropriate title based on mode
+                    if (this.currentProgram === 2) {
+                        titleText.textContent = Math.random() < 0.5 ? "IMG_V13W3R.exe" : "▓▒░ VISUAL ░▒▓";
+                    } else {
+                        titleText.textContent = "Image Viewer";
+                    }
+                }
+                
+                // Hide warning icon
+                warningIcon.style.display = "none";
+                
+                // Create image element that fills the box
+                const img = document.createElement('img');
+                img.src = imagePath;
+                img.className = 'popup-image';
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover'; // This will make image fill the box, may crop edges
+                img.style.display = 'block';
+                
+                // Handle image load error
+                img.onerror = () => {
+                    console.log(`Failed to load image: ${imagePath}`);
+                    // If image fails to load, hide the entire popup
+                    popup.style.display = 'none';
+                };
+                
+                // Handle successful image load
+                img.onload = () => {
+                    console.log(`Successfully loaded image: ${imagePath}`);
+                };
+                
+                // Replace all content with just the image
+                warningText.innerHTML = '';
+                warningText.appendChild(img);
+                warningText.style.padding = '0';
+                warningText.style.margin = '0';
+                warningText.style.height = '200px'; // Fixed height for square-ish appearance
+                warningText.style.overflow = 'hidden';
+                
+                // Hide button area but keep close button in title bar
+                if (buttonArea) {
+                    buttonArea.style.display = 'none';
+                }
+                
+                // Adjust popup styling for square image display
+                popup.style.padding = '0';
+                popup.style.width = '250px';  // Fixed square-ish width
+                popup.style.height = '250px'; // Fixed square-ish height
+                popup.style.minWidth = '250px';
+                popup.style.minHeight = '250px';
+                popup.style.maxWidth = '250px';
+                popup.style.maxHeight = '250px';
+                
+                // Apply mode-specific styling with color variety
+                if (this.currentProgram === 2) {
+                    // Chaos mode - varied color schemes based on note
+                    const chaosColors = [
+                        { bg: '#001100', border: '#00ff00', title: 'linear-gradient(90deg, #00ff00 0%, #008800 100%)', text: '#000000' }, // Green
+                        { bg: '#110000', border: '#ff0000', title: 'linear-gradient(90deg, #ff0000 0%, #880000 100%)', text: '#ffffff' }, // Red  
+                        { bg: '#000011', border: '#0000ff', title: 'linear-gradient(90deg, #0000ff 0%, #000088 100%)', text: '#ffffff' }, // Blue
+                        { bg: '#110011', border: '#ff00ff', title: 'linear-gradient(90deg, #ff00ff 0%, #880088 100%)', text: '#ffffff' }, // Magenta
+                        { bg: '#101000', border: '#ffff00', title: 'linear-gradient(90deg, #ffff00 0%, #888800 100%)', text: '#000000' }, // Yellow
+                        { bg: '#001011', border: '#00ffff', title: 'linear-gradient(90deg, #00ffff 0%, #008888 100%)', text: '#000000' }, // Cyan
+                        { bg: '#101010', border: '#ffffff', title: 'linear-gradient(90deg, #ffffff 0%, #888888 100%)', text: '#000000' }, // White/Gray
+                        { bg: '#110500', border: '#ff8000', title: 'linear-gradient(90deg, #ff8000 0%, #884400 100%)', text: '#ffffff' }  // Orange
+                    ];
+                    
+                    const colorScheme = chaosColors[note % chaosColors.length];
+                    popup.style.background = colorScheme.bg;
+                    popup.style.border = `2px solid ${colorScheme.border}`;
+                    img.classList.add('chaos-image');
+                    titleBar.style.background = colorScheme.title;
+                    titleBar.style.color = colorScheme.text;
+                } else {
+                    // Normal mode - varied clean color schemes based on note
+                    const normalColors = [
+                        { title: 'linear-gradient(90deg, #000080 0%, #000060 100%)', text: '#ffffff' }, // Blue
+                        { title: 'linear-gradient(90deg, #800000 0%, #600000 100%)', text: '#ffffff' }, // Red
+                        { title: 'linear-gradient(90deg, #008000 0%, #006000 100%)', text: '#ffffff' }, // Green
+                        { title: 'linear-gradient(90deg, #800080 0%, #600060 100%)', text: '#ffffff' }, // Purple
+                        { title: 'linear-gradient(90deg, #808000 0%, #606000 100%)', text: '#ffffff' }, // Brown/Gold
+                        { title: 'linear-gradient(90deg, #008080 0%, #006060 100%)', text: '#ffffff' }, // Teal
+                        { title: 'linear-gradient(90deg, #404040 0%, #202020 100%)', text: '#ffffff' }, // Gray
+                        { title: 'linear-gradient(90deg, #804000 0%, #603000 100%)', text: '#ffffff' }  // Orange/Brown
+                    ];
+                    
+                    const colorScheme = normalColors[note % normalColors.length];
+                    popup.style.background = '#c0c0c0';
+                    popup.style.border = '2px outset #c0c0c0';
+                    titleBar.style.background = colorScheme.title;
+                    titleBar.style.color = colorScheme.text;
+                }
+            }
+            
+            setupMIDI() {
+                // Handle MIDI device state changes (connections/disconnections)
+                this.midiAccess.onstatechange = (event) => {
+                    console.log(`MIDI device ${event.port.state}: ${event.port.name}`);
+                    if (event.port.state === 'connected' && event.port.type === 'input') {
+                        console.log(`Reconnecting to: ${event.port.name}`);
+                        event.port.onmidimessage = (midiEvent) => this.handleMIDIMessage(midiEvent);
+                    }
+                };
+                
+                const inputs = Array.from(this.midiAccess.inputs.values());
+                console.log(`Found ${inputs.length} MIDI input(s)`);
+                
+                inputs.forEach(input => {
+                    if (input.state === 'connected') {
+                        input.onmidimessage = (event) => this.handleMIDIMessage(event);
+                        console.log(`Connected to: ${input.name}`);
+                    }
+                });
+            }
+            
+            handleMIDIMessage(event) {
+                try {
+                    const [status, controller, value] = event.data;
+                    const messageType = status >> 4;
+                    const channel = status & 0xF;
+                    
+                    // Filter out MIDI clock messages (0xF8) and other system real-time messages (0xF0-0xFF)
+                    // These are continuous timing signals that shouldn't reset our auto-clear timer
+                    if (status === 0xF8 || status === 0xFA || status === 0xFB || status === 0xFC || 
+                        status === 0xFE || status === 0xFF || (status >= 0xF0 && status <= 0xF7)) {
+                        // Don't process clock messages or system exclusive messages
+                        return;
+                    }
+                    
+                    // Update last MIDI activity time (only for actual musical messages)
+                    this.lastMidiTime = Date.now();
+                    this.resetMidiTimeout();
+                    
+                    console.log(`MIDI: ${status.toString(16)} ${controller} ${value}`);
+                    console.log(`Message Type: ${messageType}, Channel: ${channel}, Note: ${controller}, Velocity: ${value}`);
+                
+                    if (messageType === 9 && value > 0) { // Note On
+                        this.handleNoteOn(controller, value);
+                        this.addTerminalMidiActivity('NOTE_ON', controller, value, channel);
+                    } else if (messageType === 8 || (messageType === 9 && value === 0)) { // Note Off
+                        this.handleNoteOff(controller);
+                        this.addTerminalMidiActivity('NOTE_OFF', controller, value, channel);
+                    } else if (messageType === 11) { // Control Change
+                        this.handleControlChange(controller, value);
+                        this.addTerminalMidiActivity('CC', controller, value, channel);
+                    } else if (messageType === 12) { // Program Change
+                        console.log(`Program Change received: channel=${channel + 1}, program=${controller}`);
+                        this.handleProgramChange(controller);
+                        this.addTerminalMidiActivity('PROG_CHG', controller, value, channel);
+                    }
+                } catch (error) {
+                    console.error('Error processing MIDI message:', error);
+                    // Continue execution even if there's an error with a single MIDI message
+                }
+            }
+            
+            handleNoteOn(note, velocity) {
+                // Create a new popup for each note
+                this.createNewPopup(note, velocity);
+                
+                // Check if screen is getting too crowded
+                this.checkScreenCoverage();
+            }
+            
+            handleProgramChange(program) {
+                console.log(`Program Change received: ${program}`);
+                
+                // Map program values to positioning modes
+                // Program 0: Centered stacking
+                // Program 1: Slight randomness from center  
+                // Program 2: Fully random positioning
+                if (program >= 0 && program <= 2) {
+                    this.currentProgram = program;
+                    console.log(`Mode changed to: ${program} (${this.programStates[program]})`);
+                    
+                    // Clear existing popups instead of repositioning them
+                    this.clearAllPopups();
+                } else {
+                    console.log(`Unknown program ${program}, ignoring`);
+                }
+            }
+            
+            resetMidiTimeout() {
+                // Clear existing timeout
+                if (this.midiTimeout) {
+                    clearTimeout(this.midiTimeout);
+                }
+                
+                // Set new timeout to clear popups when MIDI stops
+                this.midiTimeout = setTimeout(() => {
+                    console.log('No MIDI activity detected for 2 seconds - clearing all popups');
+                    this.clearAllPopups();
+                    this.resetToIntroState();
+                }, this.autoCleanupDelay);
+            }
+            
+            clearAllPopups() {
+                const allPopups = document.querySelectorAll('[id^="popup-"]');
+                allPopups.forEach(popup => {
+                    popup.style.transition = 'opacity 0.5s ease-out';
+                    popup.style.opacity = '0';
+                    setTimeout(() => {
+                        if (popup.parentNode) {
+                            popup.remove();
+                        }
+                    }, 500);
+                });
+                
+                // Clear any accumulated timeouts to prevent memory leaks
+                if (this.currentTimeout) {
+                    clearTimeout(this.currentTimeout);
+                    this.currentTimeout = null;
+                }
+                
+                console.log(`Cleared ${allPopups.length} popups`);
+            }
+            
+            resetToIntroState() {
+                // Reset to centered program state
+                this.currentProgram = 0;
+                document.body.style.background = '#000000';
+                document.body.style.animation = '';
+                console.log('Reset to centered state');
+            }
+            
+            repositionExistingPopups() {
+                const allPopups = document.querySelectorAll('[id^="popup-"]');
+                console.log(`Repositioning ${allPopups.length} existing popups to mode ${this.currentProgram}`);
+                
+                allPopups.forEach(popup => {
+                    const newPosition = this.getPositionForMode();
+                    popup.style.left = newPosition.x + 'px';
+                    popup.style.top = newPosition.y + 'px';
+                    
+                    // Reset any transforms and effects - keep it simple
+                    popup.style.transform = '';
+                    popup.style.animation = '';
+                    popup.style.transition = 'all 0.3s ease-out';
+                    
+                    // Apply mode-specific effects - reduced blur for mode 1
+                    if (this.currentProgram === 1) {
+                        // Much lighter blur with dreamlike saturation
+                        popup.style.filter = 'blur(1px) brightness(1.2) saturate(1.3) contrast(0.9)';
+                    } else {
+                        popup.style.filter = 'none';
+                    }
+                });
+                
+                // Reset background to black for all modes
+                document.body.style.background = '#000000';
+                document.body.style.animation = '';
+            }
+            
+            getPositionForMode() {
+                let x, y;
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                
+                if (this.currentProgram === 0) {
+                    // Mode 1: All boxes centered, stacked
+                    console.log('Positioning: CENTERED stacking');
+                    x = centerX; // Use center directly since CSS transform will center it
+                    y = centerY; // Use center directly since CSS transform will center it
+                    
+                } else if (this.currentProgram === 1) {
+                    // Mode 2: Slight randomness from center with blur effect
+                    console.log('Positioning: SLIGHT randomness from center with blur');
+                    const smallSpread = 300; // Increased spread around center (was 100)
+                    x = centerX + (Math.random() - 0.5) * smallSpread; // No offset needed, CSS handles centering
+                    y = centerY + (Math.random() - 0.5) * smallSpread; // No offset needed, CSS handles centering
+                    
+                    // Keep on screen (account for transform centering)
+                    x = Math.max(150, Math.min(window.innerWidth - 150, x));
+                    y = Math.max(75, Math.min(window.innerHeight - 75, y));
+                    
+                } else if (this.currentProgram === 2) {
+                    // Mode 3: Fully random positioning
+                    console.log('Positioning: FULLY random');
+                    x = 150 + Math.random() * (window.innerWidth - 300);  // Account for CSS centering
+                    y = 75 + Math.random() * (window.innerHeight - 150);   // Account for CSS centering
+                }
+                
+                return { x, y };
+            }
+            
+            createNewPopup(note, velocity) {
+                console.log(`Creating popup for note: ${note}, velocity: ${velocity}`);
+                
+                // Clone the original popup
+                const newPopup = this.popup.cloneNode(true);
+                newPopup.id = `popup-${this.popupCounter++}`;
+                newPopup.style.display = 'block';
+                newPopup.style.opacity = '1';
+                
+                // Get child elements from the clone
+                const titleText = newPopup.querySelector('.title-text');
+                const warningIcon = newPopup.querySelector('.warning-icon');
+                const warningText = newPopup.querySelector('.warning-text');
+                const closeBtn = newPopup.querySelector('.close-button');
+                const okButton = newPopup.querySelector('.ok-button');
+                const checkboxArea = newPopup.querySelector('.checkbox-area');
+                const buttonArea = newPopup.querySelector('.button-area');
+                
+                // DRASTICALLY DIFFERENT BEHAVIORS BASED ON YOUR ACTUAL DRUM NOTES
+                console.log(`Note ${note} will create type:`, 
+                    note === 60 ? 'Critical Error' :
+                    note === 61 ? 'Progress Bar' :
+                    note === 62 ? 'File Dialog' :
+                    note === 63 ? 'Input Dialog' :
+                    note === 64 ? 'Corrupted' :
+                    note === 65 ? 'Calculator' :
+                    note === 66 ? 'Task Manager' :
+                    note === 67 ? 'Network' : 'Default Critical Error'
+                );
+                
+                if (note === 60) {
+                    // Note 60: MASSIVE ERROR DIALOGS
+                    this.createCriticalErrorPopup(newPopup, note, velocity, titleText, warningIcon, warningText);
+                } else if (note === 61) {
+                    // Note 61: PROGRESS BARS AND INSTALLATIONS
+                    this.createProgressPopup(newPopup, note, velocity, titleText, warningIcon, warningText, buttonArea);
+                } else if (note === 62) {
+                    // Note 62: FILE DIALOGS
+                    this.createFileDialogPopup(newPopup, note, velocity, titleText, warningIcon, warningText, buttonArea);
+                } else if (note === 63) {
+                    // Note 63: SYSTEM PROMPTS AND INPUTS
+                    this.createInputDialogPopup(newPopup, note, velocity, titleText, warningIcon, warningText, buttonArea);
+                } else if (note === 64) {
+                    // Note 64: GLITCHY CORRUPTED WINDOWS
+                    this.createCorruptedPopup(newPopup, note, velocity, titleText, warningIcon, warningText);
+                } else if (note === 65) {
+                    // Note 65: CALCULATOR/ABOUT DIALOGS
+                    this.createCalculatorPopup(newPopup, note, velocity, titleText, warningIcon, warningText, buttonArea);
+                } else if (note === 66) {
+                    // Note 66: TASK MANAGER / SYSTEM INFO
+                    this.createTaskManagerPopup(newPopup, note, velocity, titleText, warningIcon, warningText, buttonArea);
+                } else if (note === 67) {
+                    // Note 67: NETWORK/CONNECTION DIALOGS
+                    this.createNetworkPopup(newPopup, note, velocity, titleText, warningIcon, warningText, buttonArea);
+                } else {
+                    // Any other notes: Default to critical error
+                    console.log(`Note ${note} doesn't match any specific case, using default`);
+                    this.createCriticalErrorPopup(newPopup, note, velocity, titleText, warningIcon, warningText);
+                }
+                
+                // Check if this popup should display an image (only in random modes)
+                if (this.shouldShowImageInPopup()) {
+                    this.addImageToPopup(newPopup, note, velocity, titleText, warningIcon, warningText, buttonArea);
+                }
+                
+                // Velocity affects intensity - keep it simple
+                const intensity = velocity / 127;
+                console.log(`Creating popup in mode ${this.currentProgram} (${this.programStates[this.currentProgram]}) with intensity ${intensity.toFixed(2)}`);
+                
+                // Use the new positioning system
+                const position = this.getPositionForMode();
+                newPopup.style.left = position.x + 'px';
+                newPopup.style.top = position.y + 'px';
+                newPopup.style.transform = '';
+                
+                // Apply mode-specific effects with velocity influence
+                if (this.currentProgram === 1) {
+                    // Reduced blur for the slight randomness mode - scales with velocity
+                    const blurAmount = 0.5 + (intensity * 1); // 0.5px to 1.5px blur (was 1px to 3px)
+                    const brightness = 1 + intensity * 0.3;
+                    newPopup.style.filter = `blur(${blurAmount}px) brightness(${brightness}) saturate(1.2)`;
+                } else {
+                    // Simple brightness for other modes
+                    newPopup.style.filter = `brightness(${1 + intensity * 0.5})`;
+                }
+                newPopup.style.animation = '';
+                newPopup.style.transition = '';
+                
+                // Add click handlers to close this specific popup
+                closeBtn.addEventListener('click', () => {
+                    newPopup.remove();
+                });
+                okButton.addEventListener('click', () => {
+                    newPopup.remove();
+                });
+                
+                // Add to page
+                document.body.appendChild(newPopup);
+            }
+            
+            checkScreenCoverage() {
+                const popups = document.querySelectorAll('[id^="popup-"]');
+                const totalPopupArea = popups.length * 300 * 150; // Approximate popup size
+                const screenArea = window.innerWidth * window.innerHeight;
+                const coverageRatio = totalPopupArea / screenArea;
+                
+                // If popups cover more than 100% of screen area, remove oldest ones
+                if (coverageRatio > 1.0) {
+                    const popupsToRemove = Math.floor(popups.length * 0.3); // Remove 30% of popups
+                    for (let i = 0; i < popupsToRemove; i++) {
+                        if (popups[i]) {
+                            // Instantly remove without fade
+                            popups[i].remove();
+                        }
+                    }
+                }
+            }
+            
+            handleNoteOff(note) {
+                // Reset some effects when note is released
+                this.popup.style.filter = '';
+            }
+            
+            handleControlChange(controller, value) {
+                // Apply control changes to all visible popups
+                const allPopups = document.querySelectorAll('[id^="popup-"]');
+                allPopups.forEach(popup => {
+                    if (this.midiMappings[controller]) {
+                        this.midiMappings[controller](value, popup);
+                    }
+                });
+            }
+            
+            // Position controls (now work on specific popup or all if none specified)
+            setPosition(value, targetPopup = null) {
+                const popups = targetPopup ? [targetPopup] : document.querySelectorAll('[id^="popup-"]');
+                popups.forEach(popup => {
+                    const jitter = (Math.random() - 0.5) * 200;
+                    const x = (value / 127) * window.innerWidth + jitter;
+                    popup.style.left = Math.max(0, Math.min(window.innerWidth - 300, x)) + 'px';
+                    popup.style.transform = 'translateY(-50%)';
+                });
+            }
+            
+            setVerticalPosition(value, targetPopup = null) {
+                const popups = targetPopup ? [targetPopup] : document.querySelectorAll('[id^="popup-"]');
+                popups.forEach(popup => {
+                    const jitter = (Math.random() - 0.5) * 200;
+                    const y = (value / 127) * window.innerHeight + jitter;
+                    popup.style.top = Math.max(0, Math.min(window.innerHeight - 200, y)) + 'px';
+                    popup.style.transform = 'translateX(-50%)';
+                });
+            }
+            
+            setSize(value, targetPopup = null) {
+                const popups = targetPopup ? [targetPopup] : document.querySelectorAll('[id^="popup-"]');
+                popups.forEach(popup => {
+                    const randomFactor = 0.8 + Math.random() * 0.4;
+                    const scale = (0.5 + (value / 127) * 1.5) * randomFactor;
+                    popup.style.transform = `translate(-50%, -50%) scale(${scale})`;
+                });
+            }
+            
+            setPan(value, targetPopup = null) {
+                const popups = targetPopup ? [targetPopup] : document.querySelectorAll('[id^="popup-"]');
+                popups.forEach(popup => {
+                    const extraRotation = (Math.random() - 0.5) * 180;
+                    const rotation = (value / 127 - 0.5) * 720 + extraRotation;
+                    popup.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+                });
+            }
+            
+            // Color controls
+            setBackgroundColor(value) {
+                const hue = (value / 127) * 360;
+                this.popup.style.background = `hsl(${hue}, 50%, 75%)`;
+            }
+            
+            setTitleBarColor(value) {
+                const hue = (value / 127) * 360;
+                this.titleBar.style.background = `hsl(${hue}, 70%, 50%)`;
+            }
+            
+            setTextColor(value) {
+                const hue = (value / 127) * 360;
+                this.warningText.style.color = `hsl(${hue}, 100%, 25%)`;
+            }
+            
+            setIconColor(value) {
+                const hue = (value / 127) * 360;
+                this.warningIcon.style.background = `hsl(${hue}, 100%, 50%)`;
+            }
+            
+            // Style controls
+            setFontSize(value) {
+                const size = 8 + (value / 127) * 24; // 8px to 32px
+                this.warningText.style.fontSize = size + 'px';
+            }
+            
+            setBorderStyle(value) {
+                const borderWidth = Math.floor((value / 127) * 10) + 1;
+                const borderStyle = value < 42 ? 'inset' : value < 85 ? 'outset' : 'ridge';
+                this.popup.style.border = `${borderWidth}px ${borderStyle} #c0c0c0`;
+            }
+            
+            setOpacity(value) {
+                this.popup.style.opacity = 0.3 + (value / 127) * 0.7; // 30% to 100%
+            }
+            
+            setSkew(value) {
+                const skewX = (value / 127 - 0.5) * 30; // -15 to 15 degrees
+                const skewY = (value / 127 - 0.5) * 10; // -5 to 5 degrees
+                this.popup.style.transform = `translate(-50%, -50%) skew(${skewX}deg, ${skewY}deg)`;
+            }
+            
+            // Behavioral controls
+            setSustain(value) {
+                if (value > 63) {
+                    this.okButton.style.display = 'none';
+                    this.checkbox.style.display = 'none';
+                    this.checkboxLabel.style.display = 'none';
+                } else {
+                    this.okButton.style.display = 'inline-block';
+                    this.checkbox.style.display = 'inline';
+                    this.checkboxLabel.style.display = 'inline';
+                }
+            }
+            
+            setPortamento(value) {
+                if (value > 63) {
+                    this.popup.style.animation = 'blink 0.5s infinite';
+                } else {
+                    this.popup.style.animation = '';
+                }
+            }
+            
+            setSostenuto(value) {
+                if (value > 63) {
+                    this.shakePopup();
+                }
+            }
+            
+            setSoftPedal(value) {
+                if (value > 63) {
+                    this.popup.style.filter = 'invert(1)';
+                } else {
+                    this.popup.style.filter = '';
+                }
+            }
+            
+            // Animation effects
+            shakePopup() {
+                this.popup.style.animation = 'shake 0.5s ease-in-out';
+                setTimeout(() => {
+                    this.popup.style.animation = '';
+                }, 500);
+            }
+            
+            spinPopup() {
+                this.popup.style.animation = 'spin 1s ease-in-out';
+                setTimeout(() => {
+                    this.popup.style.animation = '';
+                }, 1000);
+            }
+            
+            bouncePopup() {
+                this.popup.style.animation = 'bounce 0.6s ease-in-out';
+                setTimeout(() => {
+                    this.popup.style.animation = '';
+                }, 600);
+            }
+            
+            flashPopup() {
+                this.popup.style.animation = 'flash 0.3s ease-in-out';
+                setTimeout(() => {
+                    this.popup.style.animation = '';
+                }, 300);
+            }
+            
+            // Animation effects for specific popups
+            createCriticalErrorPopup(popup, note, velocity, titleText, warningIcon, warningText) {
+                // MASSIVE CRITICAL ERROR WINDOWS
+                titleText.textContent = "FATAL SYSTEM ERROR";
+                warningIcon.textContent = "✕";
+                warningIcon.style.background = "#ff0000";
+                warningIcon.style.color = "white";
+                warningIcon.style.border = "2px inset #800000";
+                warningText.innerHTML = `
+                    <div style="font-family: 'Courier New', monospace; color: #ff0000; font-weight: bold;">
+                        CRITICAL ERROR 0x${note.toString(16).toUpperCase().padStart(8, '0')}<br>
+                        SYSTEM HALT - PRESS CTRL+ALT+DEL TO RESTART<br>
+                        <div style="color: #000060; margin-top: 8px;">
+                        Memory dump in progress...<br>
+                        Physical Memory: ${Math.floor(Math.random() * 8192)}KB
+                        </div>
+                    </div>
+                `;
+                
+                popup.style.background = "#c0c0c0";
+                popup.style.border = "3px inset #c0c0c0";
+                popup.style.minWidth = "450px";
+                popup.style.minHeight = "200px";
+                popup.querySelector('.title-bar').style.background = "#800000";
+                
+                this.shakeSpecificPopup(popup);
+            }
+            
+            createProgressPopup(popup, note, velocity, titleText, warningIcon, warningText, buttonArea) {
+                // PROGRESS BARS AND INSTALLATION DIALOGS
+                titleText.textContent = "Installing...";
+                warningIcon.style.display = "none";
+                
+                const progress = Math.floor((velocity / 127) * 100);
+                warningText.innerHTML = `
+                    <div style="margin-bottom: 10px;">Installing MIDI Driver ${note}...</div>
+                    <div style="border: 1px inset #c0c0c0; background: #ffffff; height: 20px; position: relative;">
+                        <div style="background: linear-gradient(90deg, #000080 0%, #000060 100%); height: 100%; width: ${progress}%; transition: none;"></div>
+                        <div style="position: absolute; top: 2px; left: 5px; font-size: 10px; color: #000000;">${progress}%</div>
+                    </div>
+                    <div style="margin-top: 8px; font-size: 10px;">Time remaining: ${Math.floor(Math.random() * 300)} seconds</div>
+                `;
+                
+                buttonArea.innerHTML = '<button class="ok-button" style="margin-right: 8px;">Cancel</button>';
+                popup.style.minWidth = "350px";
+                popup.querySelector('.title-bar').style.background = "linear-gradient(90deg, #000080 0%, #000060 100%)";
+            }
+            
+            createFileDialogPopup(popup, note, velocity, titleText, warningIcon, warningText, buttonArea) {
+                // FILE DIALOGS AND SAVE PROMPTS
+                titleText.textContent = "Save As";
+                warningIcon.style.display = "none";
+                
+                const filenames = ["SONG.MID", "TRACK.WAV", "AUDIO.MP3", "MUSIC.SND", "BEAT.TRK"];
+                const filename = filenames[note % filenames.length];
+                
+                warningText.innerHTML = `
+                    <div style="margin-bottom: 8px;">File name: <input type="text" value="${filename}" style="border: 1px inset #c0c0c0; padding: 2px; width: 120px;"></div>
+                    <div style="margin-bottom: 8px;">Save as type: 
+                        <select style="border: 1px inset #c0c0c0;">
+                            <option>MIDI files (*.mid)</option>
+                            <option>All files (*.*)</option>
+                        </select>
+                    </div>
+                    <div style="border: 1px inset #c0c0c0; background: #ffffff; height: 60px; padding: 4px; font-family: 'MS Sans Serif';">
+                        📁 My Documents<br>
+                        📁 Program Files<br>
+                        📄 readme.txt
+                    </div>
+                `;
+                
+                buttonArea.innerHTML = `
+                    <button class="ok-button" style="margin-right: 8px;">Save</button>
+                    <button class="ok-button">Cancel</button>
+                `;
+                popup.style.minWidth = "400px";
+                popup.querySelector('.title-bar').style.background = "linear-gradient(90deg, #008080 0%, #00ffff 100%)";
+            }
+            
+            createInputDialogPopup(popup, note, velocity, titleText, warningIcon, warningText, buttonArea) {
+                // INPUT DIALOGS AND SYSTEM PROMPTS
+                const prompts = [
+                    "Enter your name:",
+                    "Please enter password:",
+                    "System requires restart. Continue?",
+                    "Delete all files?",
+                    "Format drive C:?"
+                ];
+                
+                titleText.textContent = "System Prompt";
+                warningIcon.textContent = "?";
+                warningIcon.style.background = "#000080";
+                warningIcon.style.color = "white";
+                
+                const prompt = prompts[note % prompts.length];
+                warningText.innerHTML = `
+                    <div style="margin-bottom: 10px;">${prompt}</div>
+                    <input type="text" style="border: 1px inset #c0c0c0; padding: 2px; width: 200px;" value="${Math.random().toString(36).substring(7)}">
+                `;
+                
+                buttonArea.innerHTML = `
+                    <button class="ok-button" style="margin-right: 8px;">OK</button>
+                    <button class="ok-button">Cancel</button>
+                `;
+                popup.querySelector('.title-bar').style.background = "linear-gradient(90deg, #008000 0%, #00ff00 100%)";
+            }
+            
+            createCorruptedPopup(popup, note, velocity, titleText, warningIcon, warningText) {
+                // CORRUPTED GLITCHY WINDOWS
+                const corruptTitle = "S█st▓m ▓rr█r".split('').map(c => 
+                    Math.random() > 0.7 ? String.fromCharCode(Math.random() * 93 + 33) : c
+                ).join('');
+                
+                titleText.textContent = corruptTitle;
+                warningIcon.textContent = "▓";
+                warningIcon.style.background = "#ff00ff";
+                warningIcon.style.animation = "glitch 0.1s infinite";
+                
+                const glitchText = `
+                    ▓▓▓ M3M0RY C0RRUPT10N D3T3CT3D ▓▓▓<br>
+                    ${Array(8).fill().map(() => 
+                        String.fromCharCode(Math.random() * 93 + 33).repeat(Math.floor(Math.random() * 20))
+                    ).join('<br>')}
+                    <br>System files damaged beyond repair...
+                `;
+                
+                warningText.innerHTML = `<div style="font-family: 'Courier New', monospace; color: #ff00ff; line-height: 1.2;">${glitchText}</div>`;
+                
+                popup.style.background = "#c0c0c0";
+                popup.style.border = "3px ridge #ff00ff";
+                popup.style.transform = `rotate(${(Math.random() - 0.5) * 10}deg) scale(${0.8 + Math.random() * 0.4})`;
+                popup.querySelector('.title-bar').style.background = "linear-gradient(90deg, #ff00ff 0%, #800080 50%, #000000 100%)";
+                
+                // Random glitch effects
+                setTimeout(() => {
+                    popup.style.filter = "hue-rotate(90deg) saturate(2)";
+                }, Math.random() * 1000);
+            }
+            
+            createCalculatorPopup(popup, note, velocity, titleText, warningIcon, warningText, buttonArea) {
+                // CALCULATOR AND ABOUT DIALOGS
+                titleText.textContent = "About MIDI System";
+                warningIcon.textContent = "ⓘ";
+                warningIcon.style.background = "#ffffff";
+                warningIcon.style.color = "#000080";
+                warningIcon.style.border = "2px inset #c0c0c0";
+                
+                warningText.innerHTML = `
+                    <div style="text-align: center; margin-bottom: 12px;">
+                        <div style="font-weight: bold; font-size: 12px;">MIDI Control System v2.${note}</div>
+                        <div style="font-size: 10px; margin-top: 4px;">Copyright © 1995 Microsoft Corporation</div>
+                    </div>
+                    <div style="border: 1px inset #c0c0c0; background: #ffffff; padding: 8px; font-size: 10px;">
+                        System Resources: ${Math.floor((velocity / 127) * 100)}%<br>
+                        Memory: ${Math.floor(Math.random() * 64)}MB<br>
+                        Registered to: Music Producer
+                    </div>
+                `;
+                
+                buttonArea.innerHTML = '<button class="ok-button">OK</button>';
+                popup.style.minWidth = "320px";
+                popup.style.minHeight = "180px";
+                popup.querySelector('.title-bar').style.background = "linear-gradient(90deg, #c0c0c0 0%, #ffffff 100%)";
+                popup.querySelector('.title-bar').style.color = "#000000";
+            }
+            
+            createTaskManagerPopup(popup, note, velocity, titleText, warningIcon, warningText, buttonArea) {
+                // TASK MANAGER / SYSTEM MONITOR
+                titleText.textContent = "Task Manager";
+                warningIcon.style.display = "none";
+                
+                const processes = ["MIDI.EXE", "AUDIO.DLL", "SYNTH.SYS", "DRUMS.WAV", "BEAT.TMP"];
+                const selectedProcess = processes[Math.floor(Math.random() * processes.length)];
+                
+                warningText.innerHTML = `
+                    <div style="font-size: 10px; margin-bottom: 6px;">
+                        <div style="background: #000080; color: white; padding: 2px;">Process Name | PID | CPU | Memory</div>
+                        <div style="border: 1px inset #c0c0c0; background: #ffffff; height: 80px; padding: 2px; overflow: hidden;">
+                            ${processes.map((proc, i) => 
+                                `<div style="background: ${i === Math.floor(note % processes.length) ? '#000080; color: white' : 'transparent'}; padding: 1px;">${proc} | ${1000 + i * 100} | ${Math.floor(Math.random() * 50)}% | ${Math.floor(Math.random() * 20)}MB</div>`
+                            ).join('')}
+                        </div>
+                    </div>
+                    <div style="font-size: 10px;">
+                        Processes: ${processes.length} | CPU Usage: ${Math.floor((velocity / 127) * 100)}%
+                    </div>
+                `;
+                
+                buttonArea.innerHTML = `
+                    <button class="ok-button" style="margin-right: 4px;">End Task</button>
+                    <button class="ok-button">Close</button>
+                `;
+                popup.style.minWidth = "380px";
+                popup.style.minHeight = "200px";
+                popup.querySelector('.title-bar').style.background = "linear-gradient(90deg, #800080 0%, #ff00ff 100%)";
+            }
+            
+            createNetworkPopup(popup, note, velocity, titleText, warningIcon, warningText, buttonArea) {
+                // NETWORK AND CONNECTION DIALOGS
+                titleText.textContent = "Network Connection";
+                warningIcon.textContent = "🌐";
+                warningIcon.style.background = "#008080";
+                warningIcon.style.color = "white";
+                warningIcon.style.fontSize = "16px";
+                
+                const connectionTypes = ["Dial-up", "LAN", "MIDI Network", "Audio Bridge", "SoundLink"];
+                const connection = connectionTypes[note % connectionTypes.length];
+                
+                warningText.innerHTML = `
+                    <div style="margin-bottom: 8px;">Establishing connection to ${connection}...</div>
+                    <div style="border: 1px inset #c0c0c0; background: #ffffff; padding: 4px; font-size: 10px;">
+                        Status: ${ velocity > 100 ? 'Connected' : velocity > 50 ? 'Connecting...' : 'Failed'}<br>
+                        Speed: ${Math.floor((velocity / 127) * 56)}k baud<br>
+                        Protocol: TCP/MIDI<br>
+                        Server: audio.server.${note}.com
+                    </div>
+                    <div style="margin-top: 8px; font-size: 10px;">
+                        ${velocity > 100 ? '✓ Connection established' : velocity > 50 ? '⏳ Please wait...' : '✗ Connection failed'}
+                    </div>
+                `;
+                
+                buttonArea.innerHTML = `
+                    <button class="ok-button" style="margin-right: 4px;">${velocity > 50 ? 'Disconnect' : 'Retry'}</button>
+                    <button class="ok-button">Cancel</button>
+                `;
+                popup.style.minWidth = "350px";
+                popup.querySelector('.title-bar').style.background = "linear-gradient(90deg, #008080 0%, #00c0c0 100%)";
+            }
+            
+            shakeSpecificPopup(popup) {
+                popup.style.animation = 'shake 0.5s ease-in-out';
+                setTimeout(() => {
+                    popup.style.animation = '';
+                }, 500);
+            }
+            
+            spinSpecificPopup(popup) {
+                popup.style.animation = 'spin 1s ease-in-out';
+                setTimeout(() => {
+                    popup.style.animation = '';
+                }, 1000);
+            }
+            
+            bounceSpecificPopup(popup) {
+                popup.style.animation = 'bounce 0.6s ease-in-out';
+                setTimeout(() => {
+                    popup.style.animation = '';
+                }, 600);
+            }
+            
+            randomTeleport() {
+                // Teleport to a completely random location on screen
+                const x = Math.random() * (window.innerWidth - 300);
+                const y = Math.random() * (window.innerHeight - 200);
+                this.popup.style.left = x + 'px';
+                this.popup.style.top = y + 'px';
+                this.popup.style.transform = '';
+            }
+            
+            // Terminal Methods
+            addTerminalMidiActivity(type, controller, value, channel) {
+                const timestamp = new Date().toLocaleTimeString('en-US', { 
+                    hour12: false, 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit' 
+                });
+                
+                // Generate random terminal output based on MIDI data and current program mode
+                let output = '';
+                let command;
+                let randomChars;
+                
+                // Check if we're in fully random mode (program 2) for unhinged output
+                if (this.currentProgram === 2) {
+                    // SIMPLIFIED CHAOS MODE - Use chaos commands and characters (optimized for latency)
+                    command = this.terminalUnhingedCommands[Math.floor(Math.random() * this.terminalUnhingedCommands.length)];
+                    
+                    // Simplified chaotic random characters (reduced from 5-20 to 3-8)
+                    randomChars = Array(3 + Math.floor(Math.random() * 6))
+                        .fill()
+                        .map(() => this.chaosCharacters[Math.floor(Math.random() * this.chaosCharacters.length)])
+                        .join('');
+                    
+                    // Reduced glitch prefix probability (70% to 40% for better performance)
+                    if (Math.random() < 0.4) {
+                        const glitchPrefix = this.glitchPrefixes[Math.floor(Math.random() * this.glitchPrefixes.length)];
+                        command = glitchPrefix + ' ' + command;
+                    }
+                } else {
+                    // NORMAL MODE - Use regular commands and characters
+                    command = this.terminalMidiCommands[Math.floor(Math.random() * this.terminalMidiCommands.length)];
+                    
+                    // Create normal looking MIDI data with some random characters
+                    randomChars = Array(3 + Math.floor(Math.random() * 8))
+                        .fill()
+                        .map(() => this.terminalCharacters[Math.floor(Math.random() * this.terminalCharacters.length)])
+                        .join('');
+                }
+                
+                switch(type) {
+                    case 'NOTE_ON':
+                        if (this.currentProgram === 2) {
+                            // Simplified unhinged note on (no timestamp corruption for better performance)
+                            output = `[${timestamp}] ${command} ₵Ⱨ${channel + 1} ₦${controller.toString().padStart(3, '0')} V${value.toString().padStart(3, '0')} ${randomChars}`;
+                        } else {
+                            output = `[${timestamp}] ${command} CH${channel + 1} N${controller.toString().padStart(3, '0')} V${value.toString().padStart(3, '0')} ${randomChars}`;
+                        }
+                        break;
+                    case 'NOTE_OFF':
+                        if (this.currentProgram === 2) {
+                            output = `[${timestamp}] ₥łđł_Ø₣₣: ⱤɆⱠɆ₳₴Ɇ ₵Ⱨ${channel + 1} ₦${controller.toString().padStart(3, '0')} ${randomChars}`;
+                        } else {
+                            output = `[${timestamp}] MIDI_OFF: Release CH${channel + 1} N${controller.toString().padStart(3, '0')} ${randomChars}`;
+                        }
+                        break;
+                    case 'CC':
+                        if (this.currentProgram === 2) {
+                            output = `[${timestamp}] ₵₮ⱤⱠ_₵Ⱨ₲: ₵₵${controller.toString().padStart(3, '0')}=${value.toString().padStart(3, '0')} ₵Ⱨ${channel + 1} ${randomChars}`;
+                        } else {
+                            output = `[${timestamp}] CTRL_CHG: CC${controller.toString().padStart(3, '0')}=${value.toString().padStart(3, '0')} CH${channel + 1} ${randomChars}`;
+                        }
+                        break;
+                    case 'PROG_CHG':
+                        if (this.currentProgram === 2) {
+                            output = `[${timestamp}] ₽ⱤØ₲: ₽ⱤØ₲Ɽ₳₥ ${controller} ₴ɆⱠɆ₵₮Ɇđ ₵Ⱨ${channel + 1} ${randomChars}`;
+                        } else {
+                            output = `[${timestamp}] PROG: Program ${controller} selected CH${channel + 1} ${randomChars}`;
+                        }
+                        break;
+                    default:
+                        if (this.currentProgram === 2) {
+                            output = `[${timestamp}] ₥łđł: ${type} ${randomChars}`;
+                        } else {
+                            output = `[${timestamp}] MIDI: ${type} ${randomChars}`;
+                        }
+                }
+                
+                // Add some random glitch characters occasionally
+                if (this.currentProgram === 2) {
+                    // Simplified chaos mode glitch (reduced frequency and complexity for better performance)
+                    if (Math.random() < 0.5) { // Reduced from 0.8 to 0.5
+                        const glitchChars = '▓▒░█▄▀■□▪▫';
+                        const glitch = glitchChars[Math.floor(Math.random() * glitchChars.length)]; // Single character instead of array
+                        output = output.replace(/(.{15,25})/, `$1${glitch}`); // Simplified replacement
+                    }
+                    
+                    // Removed word scrambling for better performance
+                } else {
+                    // Normal mode - less frequent glitch
+                    if (Math.random() < 0.3) {
+                        const glitchChars = '▓▒░█▄▀■□▪▫';
+                        const glitch = glitchChars[Math.floor(Math.random() * glitchChars.length)];
+                        output = output.replace(/(.{10,20})/, `$1${glitch}`);
+                    }
+                }
+                
+                this.addTerminalLine(output);
+                
+                // Sometimes add additional random data lines
+                if (this.currentProgram === 2) {
+                    // Simplified chaos mode data lines (reduced frequency and complexity)
+                    if (Math.random() < 0.4) { // Reduced from 0.7 to 0.4
+                        let extraData;
+                        if (Math.random() < 0.6) {
+                            // Simplified unhinged data (reduced array size)
+                            extraData = `    ▓▒░DATA░▒▓: ${Array(8).fill().map(() => 
+                                this.chaosCharacters[Math.floor(Math.random() * this.chaosCharacters.length)]
+                            ).join(' ')}`;
+                        } else {
+                            // Regular hex data with occasional chaos character
+                            extraData = `    DATA: ${Array(8).fill().map(() => {
+                                const hex = Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase();
+                                return Math.random() < 0.2 ? '▓' + hex : hex; // Simplified chaos insertion
+                            }).join(' ')}`;
+                        }
+                        this.addTerminalLine(extraData);
+                        
+                        // Removed nonsensical lines for better performance
+                    }
+                } else {
+                    // Normal mode - occasional normal data lines
+                    if (Math.random() < 0.4) {
+                        const extraData = `    DATA: ${Array(16).fill().map(() => 
+                            Math.floor(Math.random() * 256).toString(16).padStart(2, '0').toUpperCase()
+                        ).join(' ')}`;
+                        this.addTerminalLine(extraData);
+                    }
+                }
+            }
+            
+            addTerminalLine(text) {
+                // Remove cursor from current position
+                const cursorSpan = this.terminalScreen.querySelector('.terminal-cursor');
+                if (cursorSpan && cursorSpan.parentNode) {
+                    cursorSpan.remove();
+                }
+                
+                // Add new line
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'terminal-line';
+                lineDiv.textContent = text;
+                this.terminalScreen.appendChild(lineDiv);
+                
+                // Maintain max lines
+                const lines = this.terminalScreen.querySelectorAll('.terminal-line');
+                if (lines.length > this.terminalMaxLines) {
+                    lines[0].remove();
+                }
+                
+                // Add cursor to end
+                const promptDiv = document.createElement('div');
+                promptDiv.className = 'terminal-line';
+                promptDiv.innerHTML = 'evan@comp:~/$<span class="terminal-cursor">_</span>';
+                this.terminalScreen.appendChild(promptDiv);
+                
+                // Auto-scroll to bottom
+                this.terminalScreen.scrollTop = this.terminalScreen.scrollHeight;
+            }
+            
+            clearTerminal() {
+                this.terminalScreen.innerHTML = `
+                    <div class="terminal-line">midimon v1.2.3 - Real-time MIDI Monitor</div>
+                    <div class="terminal-line">Copyright (c) 1995-2025 Free Software Foundation</div>
+                    <div class="terminal-line"></div>
+                    <div class="terminal-line">Keyboard shortcuts:</div>
+                    <div class="terminal-line">  SPACE: Clear all popups</div>
+                    <div class="terminal-line">  CTRL+C: Clear terminal</div>
+                    <div class="terminal-line">  F11: Force MIDI reconnect</div>
+                    <div class="terminal-line">  F12: Toggle terminal</div>
+                    <div class="terminal-line"></div>
+                    <div class="terminal-line">Terminal cleared by user</div>
+                    <div class="terminal-line"></div>
+                    <div class="terminal-line">evan@comp:~/$<span class="terminal-cursor">_</span></div>
+                `;
+            }
+            
+            hidePopup() {
+                // Fade out animation
+                this.popup.style.transition = 'opacity 0.5s ease-out';
+                this.popup.style.opacity = '0';
+                
+                setTimeout(() => {
+                    this.popup.style.display = 'none';
+                    this.popup.style.transition = '';
+                }, 500);
+            }
+            
+            showPopup() {
+                // Show popup with fade in
+                this.popup.style.display = 'block';
+                this.popup.style.opacity = '0';
+                this.popup.style.transition = 'opacity 0.3s ease-in';
+                
+                setTimeout(() => {
+                    this.popup.style.opacity = '1';
+                }, 10);
+                
+                setTimeout(() => {
+                    this.popup.style.transition = '';
+                }, 300);
+            }
+        }
+        
+        // CSS animations need to be added
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes blink {
+                0%, 50% { opacity: 1; }
+                51%, 100% { opacity: 0.3; }
+            }
+            @keyframes shake {
+                0%, 100% { transform: translate(-50%, -50%); }
+                10%, 30%, 50%, 70%, 90% { transform: translate(-52%, -50%); }
+                20%, 40%, 60%, 80% { transform: translate(-48%, -50%); }
+            }
+            @keyframes spin {
+                0% { transform: translate(-50%, -50%) rotate(0deg); }
+                100% { transform: translate(-50%, -50%) rotate(360deg); }
+            }
+            @keyframes bounce {
+                0%, 100% { transform: translate(-50%, -50%) scale(1); }
+                50% { transform: translate(-50%, -50%) scale(1.1); }
+            }
+            @keyframes flash {
+                0%, 100% { background: #c0c0c0; }
+                50% { background: #ffffff; }
+            }
+            @keyframes glitch {
+                0% { transform: translate(0, 0); filter: hue-rotate(0deg); }
+                20% { transform: translate(-1px, 1px); filter: hue-rotate(90deg); }
+                40% { transform: translate(1px, -1px); filter: hue-rotate(180deg); }
+                60% { transform: translate(-1px, -1px); filter: hue-rotate(270deg); }
+                80% { transform: translate(1px, 1px); filter: hue-rotate(360deg); }
+                100% { transform: translate(0, 0); filter: hue-rotate(0deg); }
+            }
+            
+            /* NEW PROGRAM-SPECIFIC ANIMATIONS */
+            
+            /* VERSE: Slow melting effects */
+            @keyframes melt {
+                0% { transform: scale(1) skew(0deg); }
+                25% { transform: scale(1.02) skew(1deg) translateY(5px); }
+                50% { transform: scale(0.98) skew(-1deg) translateY(-3px); }
+                75% { transform: scale(1.01) skew(0.5deg) translateY(2px); }
+                100% { transform: scale(1) skew(0deg); }
+            }
+            
+            @keyframes breathe {
+                0%, 100% { opacity: 0.8; }
+                50% { opacity: 1; }
+            }
+            
+            /* BREAKDOWN: Extreme chaos effects */
+            @keyframes chaos {
+                0% { transform: rotate(0deg) scale(1); }
+                10% { transform: rotate(36deg) scale(1.1); }
+                20% { transform: rotate(-72deg) scale(0.9); }
+                30% { transform: rotate(108deg) scale(1.2); }
+                40% { transform: rotate(-144deg) scale(0.8); }
+                50% { transform: rotate(180deg) scale(1.3); }
+                60% { transform: rotate(-216deg) scale(0.7); }
+                70% { transform: rotate(252deg) scale(1.4); }
+                80% { transform: rotate(-288deg) scale(0.6); }
+                90% { transform: rotate(324deg) scale(1.5); }
+                100% { transform: rotate(0deg) scale(1); }
+            }
+            
+            @keyframes breakdown {
+                0% { 
+                    left: var(--start-x, 50%); 
+                    top: var(--start-y, 50%); 
+                    transform: skew(0deg) rotate(0deg);
+                }
+                25% { 
+                    left: calc(var(--start-x, 50%) + 20px); 
+                    top: calc(var(--start-y, 50%) - 15px); 
+                    transform: skew(5deg) rotate(90deg);
+                }
+                50% { 
+                    left: calc(var(--start-x, 50%) - 25px); 
+                    top: calc(var(--start-y, 50%) + 10px); 
+                    transform: skew(-8deg) rotate(180deg);
+                }
+                75% { 
+                    left: calc(var(--start-x, 50%) + 15px); 
+                    top: calc(var(--start-y, 50%) + 20px); 
+                    transform: skew(3deg) rotate(270deg);
+                }
+                100% { 
+                    left: var(--start-x, 50%); 
+                    top: var(--start-y, 50%); 
+                    transform: skew(0deg) rotate(360deg);
+                }
+            }
+            
+            @keyframes strobe {
+                0%, 50% { opacity: 1; }
+                51%, 100% { opacity: 0.1; }
+            }
+            
+            @keyframes backgroundChaos {
+                0% { background-position: 0% 0%; }
+                25% { background-position: 100% 100%; }
+                50% { background-position: 0% 100%; }
+                75% { background-position: 100% 0%; }
+                100% { background-position: 0% 0%; }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new MIDIPopupController();
+        });
+    </script>
+</body>
+</html>
